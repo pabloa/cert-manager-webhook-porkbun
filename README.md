@@ -6,6 +6,10 @@
 
 An implementation of the cert-manager [`webhook.Solver` interface](https://pkg.go.dev/github.com/cert-manager/cert-manager@v1.12.3/pkg/acme/webhook#Solver) for [Porkbun](https://porkbun.com/). This is based on [cert-manager/webhook-example](https://github.com/cert-manager/webhook-example), with inspiration from [baarde/cert-manager-webhook-ovh](https://github.com/baarde/cert-manager-webhook-ovh)
 
+## Subdomain Support
+
+This webhook properly supports issuing certificates for multi-level subdomains (e.g., `*.dev.example.com`, `*.stage.example.com`). The webhook automatically detects the authoritative Porkbun zone by querying the Porkbun API, ensuring that ACME DNS-01 challenges work correctly even when cert-manager passes incorrect zone information for subdomains. This enables environment-specific wildcard certificates for multi-environment Kubernetes deployments without requiring manual DNS delegation or workarounds.
+
 Note: The test suite does work, but I straight up deleted `main_test.go` because the dependency on `github.com/cert-manager/cert-manager/test/acme` was giving me insane, impossible to resolve versioning conflicts. I'm sure these will be resolved by someone more knowledgeable updating the `go.mod` in the example webhook, at which point I'll add the tests back.
 
 ## Installation

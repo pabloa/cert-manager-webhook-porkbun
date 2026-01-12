@@ -94,7 +94,12 @@ func (p *porkbunDNSProviderSolver) Present(ch *v1alpha1.ChallengeRequest) error 
 		return fmt.Errorf("failed to init Porkbun client: %w", err)
 	}
 
-	domain := util.UnFqdn(ch.ResolvedZone)
+	// Find the actual Porkbun zone (registered domain) for this FQDN
+	domain, err := p.findZone(ctx, pbClient, ch.ResolvedFQDN)
+	if err != nil {
+		return fmt.Errorf("failed to find authoritative zone: %w", err)
+	}
+
 	subDomain := getSubDomain(domain, ch.ResolvedFQDN)
 	target := ch.Key
 
@@ -137,6 +142,47 @@ func getSubDomain(domain, fqdn string) string {
 	}
 
 	return util.UnFqdn(fqdn)
+}
+
+// findZone attempts to find the authoritative DNS zone for the given FQDN by querying Porkbun.
+// It tries to find the registered domain by testing potential zones from the base domain upwards.
+// This is necessary because cert-manager might not correctly identify the zone for subdomains.
+// For example, for "_acme-challenge.dev.example.com", we try:
+// 1. example.com (most likely - the registered domain/zone in Porkbun)
+// 2. dev.example.com (will fail - Porkbun doesn't support delegated subzones)
+func (p *porkbunDNSProviderSolver) findZone(ctx context.Context, pbClient *porkbun.Client, fqdn string) (string, error) {
+	fqdnUnqualified := util.UnFqdn(fqdn)
+	parts := strings.Split(fqdnUnqualified, ".")
+
+	// We need at least 2 parts for a valid domain (e.g., example.com)
+	if len(parts) < 2 {
+		return "", fmt.Errorf("invalid FQDN: %s", fqdn)
+	}
+
+	// Try to find the zone by testing from the base domain upwards
+	// Start with the most likely candidate (the base domain)
+	for i := len(parts) - 2; i >= 0; i-- {
+		potentialZone := strings.Join(parts[i:], ".")
+
+		// Skip the ACME challenge prefix
+		if strings.HasPrefix(potentialZone, "_acme-challenge.") {
+			continue
+		}
+
+		fmt.Printf("Testing if %s is a valid Porkbun zone...\n", potentialZone)
+		resp, err := pbClient.RetrieveDNSRecordsByDomain(ctx, potentialZone)
+		if err != nil {
+			fmt.Printf("Error querying zone %s: %v\n", potentialZone, err)
+			continue
+		}
+		if resp.Status == "SUCCESS" {
+			fmt.Printf("Found authoritative zone: %s\n", potentialZone)
+			return potentialZone, nil
+		}
+		fmt.Printf("Zone %s returned status: %s\n", potentialZone, resp.Status)
+	}
+
+	return "", fmt.Errorf("could not find authoritative Porkbun zone for %s (tried parts from %s)", fqdn, fqdnUnqualified)
 }
 
 func (p *porkbunDNSProviderSolver) newPorkbunClient(ch *v1alpha1.ChallengeRequest) (*porkbun.Client, error) {
@@ -210,7 +256,12 @@ func (p *porkbunDNSProviderSolver) CleanUp(ch *v1alpha1.ChallengeRequest) error 
 		return fmt.Errorf("failed to init Porkbun client: %w", err)
 	}
 
-	domain := util.UnFqdn(ch.ResolvedZone)
+	// Find the actual Porkbun zone (registered domain) for this FQDN
+	domain, err := p.findZone(ctx, pbClient, ch.ResolvedFQDN)
+	if err != nil {
+		return fmt.Errorf("failed to find authoritative zone: %w", err)
+	}
+
 	subDomain := getSubDomain(domain, ch.ResolvedFQDN)
 	target := ch.Key
 
