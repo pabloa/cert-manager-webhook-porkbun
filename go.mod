@@ -1,4 +1,4 @@
-module github.com/bcspragu/cert-manager-webhook-porkbun
+module github.com/pabloa/cert-manager-webhook-porkbun
 
 go 1.19
 
@@ -12,6 +12,8 @@ require (
 	k8s.io/apimachinery v0.26.4
 	k8s.io/client-go v0.26.4
 )
+
+replace github.com/Venafi/vcert/v4 => github.com/Venafi/vcert/v4 v4.20.0
 
 require (
 	github.com/NYTimes/gziphandler v1.1.1 // indirect
