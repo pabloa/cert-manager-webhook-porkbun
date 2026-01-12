@@ -1,11 +1,11 @@
-groupName: porkbun.talinx.dev
+groupName: cert-manager-webhook-porkbun.pabloa.dev
 
 certManager:
   namespace: cert-manager
   serviceAccountName: cert-manager
 
 image:
-  repository: talinx/cert-manager-webhook-porkbun
+  repository: pabloa/cert-manager-webhook-porkbun
   tag: latest
   pullPolicy: IfNotPresent
 

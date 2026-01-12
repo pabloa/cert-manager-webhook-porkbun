@@ -21,7 +21,7 @@ Install cert-manager using its [installation documentation](https://cert-manager
 Add helm repo:
 
 ```bash
-helm repo add cert-manager-webhook-porkbun https://talinx.github.io/cert-manager-webhook-porkbun
+helm repo add cert-manager-webhook-porkbun https://pabloa.github.io/cert-manager-webhook-porkbun
 ```
 
 [Generate a porkbun API key](https://kb.porkbun.com/article/190-getting-started-with-the-porkbun-api) and create a secret with it:
@@ -60,7 +60,7 @@ spec:
     solvers:
     - dns01:
         webhook:
-          groupName: porkbun.talinx.dev
+          groupName: cert-manager-webhook-porkbun.pabloa.dev
           solverName: porkbun
           config:
             apiKey:
