@@ -6,7 +6,9 @@
 
 An implementation of the cert-manager [`webhook.Solver` interface](https://pkg.go.dev/github.com/cert-manager/cert-manager@v1.12.3/pkg/acme/webhook#Solver) for [Porkbun](https://porkbun.com/). This is based on [cert-manager/webhook-example](https://github.com/cert-manager/webhook-example), with inspiration from [baarde/cert-manager-webhook-ovh](https://github.com/baarde/cert-manager-webhook-ovh)
 
-Note: The test suite does work, but I straight up deleted `main_test.go` because the dependency on `github.com/cert-manager/cert-manager/test/acme` was giving me insane, impossible to resolve versioning conflicts. I'm sure these will be resolved by someone more knowledgeable updating the `go.mod` in the example webhook, at which point I'll add the tests back.
+## Subdomain Support
+
+This webhook properly supports issuing certificates for multi-level subdomains (e.g., `*.subdomain.example.com`, `*.subdomain.example.net`). The webhook automatically detects the authoritative Porkbun zone by querying the Porkbun API, ensuring that ACME DNS-01 challenges work correctly even when cert-manager passes incorrect zone information for subdomains. This enables environment-specific wildcard certificates for multi-environment Kubernetes deployments without requiring manual DNS delegation or workarounds.
 
 ## Installation
 
@@ -93,13 +95,26 @@ else they will have undetermined behaviour when used with cert-manager.
 **It is essential that you configure and run the test suite when creating a
 DNS01 webhook.**
 
-An example Go test file has been provided in [main_test.go](https://github.com/bcspragu/cert-manager-webhook-porkbun/blob/master/main_test.go).
+An example Go test file has been provided in [main_test.go](https://github.com/pabloa/cert-manager-webhook-porkbun/blob/master/main_test.go).
+
+Before running the tests, you need to configure your Porkbun API credentials:
+
+1. **Enable API Access for your domain** - Go to your domain's settings in Porkbun and enable the "API Access" option. This must be enabled for each domain you want to test with.
+2. Get your API credentials from [Porkbun API settings](https://porkbun.com/account/api)
+3. Base64 encode your credentials:
+   ```bash
+   echo -n "pk1_your_api_key" | base64
+   echo -n "sk1_your_secret_key" | base64
+   ```
+4. Update `testdata/porkbun/porkbun-credentials.yaml` with your base64-encoded values
+5. Set TEST_ZONE_NAME to a domain you own in Porkbun (must have API Access enabled)
 
 You can run the test suite with:
 
 ```bash
-$ TEST_ZONE_NAME=example.com. make test
+$ TEST_ZONE_NAME=yourdomain.com. make test
 ```
 
-The example file has a number of areas you must fill in and replace with your
-own options in order for tests to pass.
+See [testdata/porkbun/README.md](testdata/porkbun/README.md) for detailed instructions.
+
+**Note:** The tests will create and delete actual TXT records in your DNS zone.
